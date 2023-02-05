@@ -67,19 +67,19 @@ class MonitorInterval
 
     int GetId() const { return id; }
 
-    int GetBytesSent() const { return bytes_sent; } 
-    int GetBytesAcked() const { return bytes_acked; } 
-    int GetBytesLost() const { return bytes_lost; } 
+    uint32_t GetBytesSent() const { return bytes_sent; } 
+    uint32_t GetBytesAcked() const { return bytes_acked; } 
+    uint32_t GetBytesLost() const { return bytes_lost; } 
 
-    uint64_t GetSendStartTime() const { return first_packet_sent_time.GetNanoSeconds(); }
-    uint64_t GetSendEndTime() const { return last_packet_sent_time.GetNanoSeconds(); }
-    uint64_t GetRecvStartTime() const { return first_packet_ack_time.GetNanoSeconds(); }
-    uint64_t GetRecvEndTime() const { return last_packet_ack_time.GetNanoSeconds(); }
+    Time GetSendStartTime() const { return first_packet_sent_time; }
+    Time GetSendEndTime() const { return last_packet_sent_time; }
+    Time GetRecvStartTime() const { return first_packet_ack_time; }
+    Time GetRecvEndTime() const { return last_packet_ack_time; }
 
     double GetFirstAckLatency() const;
     double GetLastAckLatency() const;
 
-    int GetAveragePacketSize() const { return bytes_sent / n_packets_sent; }
+    uint32_t GetAveragePacketSize() const { return bytes_sent / n_packets_sent; }
     double GetUtility() const { return utility; }
 
     // Additional NS3 for testing
@@ -87,7 +87,7 @@ class MonitorInterval
     void SetEndTime(Time end_time);
 
   private:
-    static int next_id;
+    int next_id{0};
 
     bool ContainsPacket(SequenceNumber32 packet_num);
 
@@ -127,10 +127,10 @@ class MonitorInterval
     double utility;
 
     // The number of packets in this monitor interval.
-    int n_packets_sent;
+    uint32_t n_packets_sent;
 
     // The number of packets whose return status is known.
-    int n_packets_accounted_for;
+    uint32_t n_packets_accounted_for;
 
     // A sample of the RTT for each packet.
     std::vector<PacketRttSample> packet_rtt_samples;

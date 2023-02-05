@@ -84,17 +84,16 @@ TcpPccAurora::GetTypeId()
 }
 
 TcpPccAurora::TcpPccAurora()
-    : TcpCongestionOpsCustom(),
-      m_sending_rate(DataRate("512kbps"))
+    : TcpCongestionOpsCustom()
 {
     NS_LOG_FUNCTION(this);
     // std::cout << "Starting sending rate = " << m_sending_rate << std::endl;
     double call_freq = 1.0 / kMonitorIntervalDuration;
-    m_rate_controller = new PccCustomRateController(call_freq);}
+    m_rate_controller = new PccCustomRateController(call_freq);
+}
 
 TcpPccAurora::TcpPccAurora(const TcpPccAurora& sock)
-    : TcpCongestionOpsCustom(sock),
-      m_sending_rate(DataRate("512kbps"))
+    : TcpCongestionOpsCustom(sock)
 {
     NS_LOG_FUNCTION(this);
     // std::cout << "Starting sending rate = " << m_sending_rate << std::endl;
@@ -244,7 +243,6 @@ TcpPccAurora::OnPacketLost(SequenceNumber32 seq, uint32_t sz)
 {
     auto event_time = Simulator::Now();
     m_interval_queue.OnPacketLost(event_time, seq, sz);
-    // std::cout << "Here is PacketLoss " << seq << " "<< sz << "\n";
     CheckMonitoringInterval(event_time);
 }
 

@@ -33,6 +33,7 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/point-to-point-layout-module.h"
 #include "ns3/flow-monitor-module.h"
+#include "ns3/opengym-module.h"
 
 #include <fstream>
 #include <string>
@@ -41,7 +42,7 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("TcpBulkSendExample");
+NS_LOG_COMPONENT_DEFINE("TcpPccAuroraSim");
 
 static void
 CwndTracer(uint32_t oldval, uint32_t newval)
@@ -78,8 +79,16 @@ ConnectSocketTraces()
 int
 main(int argc, char* argv[])
 {
+    // OpenGym Env --- has to be created before any other thing
+    uint32_t openGymPort = 5555;
+    Ptr<OpenGymInterface> openGymInterface;
+    openGymInterface = OpenGymInterface::Get(openGymPort);
+    uint32_t run = 0;
+    double tcpEnvTimeStep = 0.1;
+    double duration = 10.0;
     bool tracing = false;
     uint32_t maxBytes = 0;
+    uint32_t isTest = 0;
 
     //
     // Allow the user to override any of the defaults at
@@ -88,6 +97,11 @@ main(int argc, char* argv[])
     CommandLine cmd(__FILE__);
     cmd.AddValue("tracing", "Flag to enable/disable tracing", tracing);
     cmd.AddValue("maxBytes", "Total number of bytes for application to send", maxBytes);
+    cmd.AddValue("openGymPort", "Port number for OpenGym env. Default: 5555", openGymPort);
+    cmd.AddValue("simSeed", "Seed for random generator. Default: 1", run);
+    cmd.AddValue("envTimeStep", "Time step interval for time-based TCP env [s]. Default: 0.1s", tcpEnvTimeStep);
+    cmd.AddValue("duration", "Time to allow flows to run in seconds", duration);
+    cmd.AddValue("test", "Print Flowstats", isTest);
     cmd.Parse(argc, argv);
 
     Time::SetResolution (Time::NS);
@@ -117,11 +131,12 @@ main(int argc, char* argv[])
     PointToPointHelper accessLink;
     accessLink.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
     accessLink.SetChannelAttribute("Delay", StringValue("0.1ms"));
+    // accessLink.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", StringValue("1p"));
 
     PointToPointHelper bottleneckLink;
     bottleneckLink.SetDeviceAttribute("DataRate", StringValue("1024Kbps"));
     bottleneckLink.SetChannelAttribute("Delay", StringValue("30ms"));
-    bottleneckLink.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", StringValue("1p"));
+    bottleneckLink.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", StringValue("128p"));
 
     // Arrange Dumbell
     PointToPointDumbbellHelper dumbell (1, accessLink,
@@ -165,7 +180,7 @@ main(int argc, char* argv[])
     source.SetAttribute("MaxBytes", UintegerValue(maxBytes));
     ApplicationContainer sourceApps = source.Install(dumbell.GetLeft(0));
     sourceApps.Start(Seconds(0.0));
-    sourceApps.Stop(Seconds(10.0));
+    sourceApps.Stop(Seconds(60.0));
 
     //
     // Create a PacketSinkApplication and install it on node right
@@ -173,7 +188,7 @@ main(int argc, char* argv[])
     PacketSinkHelper sink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
     ApplicationContainer sinkApps = sink.Install(dumbell.GetRight(0));
     sinkApps.Start(Seconds(0.0));
-    sinkApps.Stop(Seconds(10.0));
+    sinkApps.Stop(Seconds(60.0));
 
     //
     // Set up tracing if enabled
@@ -198,11 +213,13 @@ main(int argc, char* argv[])
     Simulator::Stop(Seconds(60.0));
     Simulator::Run();
 
+    if (isTest)
+    {
     monitor->CheckForLostPackets ();
     Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
     FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats ();
     for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
-        {
+    {
         Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
         if (t.sourceAddress != dumbell.GetLeftIpv4Address(0))
             {
@@ -220,13 +237,15 @@ main(int argc, char* argv[])
         std::cout << "  Throughput: " << i->second.rxBytes * 8.0 / flow_duration_rx / 1000 / 1000  << "Mbps\n";
         std::cout << "  Avg Delay:   " << i->second.delaySum.GetMilliSeconds() / i->second.rxPackets << "ms\n";
         std::cout << "  Loss:   " << 1.0 - (static_cast<float>(i->second.rxBytes) / i->second.txBytes) << "\n";
-        }
+    }
+    }
 
+    openGymInterface->NotifySimulationEnd();
     Simulator::Destroy();
     NS_LOG_INFO("Done.");
 
-    Ptr<PacketSink> sink1 = DynamicCast<PacketSink>(sinkApps.Get(0));
-    std::cout << "Total Bytes Received: " << sink1->GetTotalRx() << std::endl;
+    // Ptr<PacketSink> sink1 = DynamicCast<PacketSink>(sinkApps.Get(0));
+    // std::cout << "Total Bytes Received: " << sink1->GetTotalRx() << std::endl;
     // std::cout << "Estimated Throughput: " << sink1->GetTotalRx() * 8 / 10 / 1000 << std::endl;
 
     return 0;

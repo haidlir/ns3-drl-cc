@@ -104,3 +104,7 @@ cmake-build-release/
 .cache/
 
 __pycache__
+
+# Scratch
+scratch/tcp/tcp-pcc-aurora/tensorboard/
+.pkl

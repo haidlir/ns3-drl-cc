@@ -167,8 +167,8 @@ MonitorInterval::MonitorInterval(DataRate sending_rate, Time end_time) {
     n_packets_accounted_for = 0;
     first_packet_ack_time = Time();
     last_packet_ack_time = Time();
-    // id = next_id;
-    // ++next_id;
+    id = next_id;
+    ++next_id;
 }
 
 void MonitorInterval::OnPacketSent(Time cur_time, SequenceNumber32 packet_number, uint32_t packet_size) {
