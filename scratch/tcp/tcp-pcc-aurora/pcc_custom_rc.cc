@@ -4,6 +4,12 @@
 #include <time.h>
 #include <random>
 
+namespace
+{
+    const ns3::DataRate MIN_SENDING_RATE = ns3::DataRate("512Kbps");
+    const ns3::DataRate MAX_SENDING_RATE = ns3::DataRate("90Mbps");
+}
+
 namespace ns3
 {
 
@@ -124,9 +130,9 @@ States::States() : m_size(30)
 
 void States::AddState(float num)
 {
-    m_queue.push_front(num);
+    m_queue.push_back(num);
     if (m_queue.size() > m_size) {
-        m_queue.pop_back();
+        m_queue.pop_front();
     }
 };
 
@@ -164,9 +170,9 @@ void PccCustomRateController::MonitorIntervalFinished(const MonitorInterval& mi)
     //           << latency_ratio << " "
     //           << send_ratio << " " << std::endl;
 
-    m_states.AddState(send_ratio);
-    m_states.AddState(latency_ratio);
     m_states.AddState(sent_latency_inflation);
+    m_states.AddState(latency_ratio);
+    m_states.AddState(send_ratio);
 
     // https://github.com/PCCproject/PCC-RL/blob/64bea6eeee3a3e558449c35b6496cf596f5ded52/src/gym/network_sim.py#L194
     // They change the reward function proportional to the bandwidth and RTT prop configured in the network sim.
@@ -177,10 +183,15 @@ void PccCustomRateController::MonitorIntervalFinished(const MonitorInterval& mi)
     // double reward = (10.0 * throughput / (8 * mi.GetAveragePacketSize())) - 1e3 * latency_s - 2e3 * loss;
 
     // Scaling Parameters
-    double conf_mean_bw = 1024 * 1e3;
-    double conf_rtt_s = 2 * 0.03 + 0.002;
+    double conf_mean_bw = 12 * 1e6;
+    double conf_rtt_s = 2 * 0.030 + 0.002;
 
-    double reward = 3*1e3 * (throughput / conf_mean_bw - latency_s / (conf_rtt_s * 1.5) - 6 * loss);
+    // double reward = 3*1e3 * (throughput / conf_mean_bw - latency_s / (conf_rtt_s * 1.5) - 6 * loss);
+    double reward = 3*1e3 * (throughput / conf_mean_bw - latency_s / (conf_rtt_s * 2) - 6 * loss);
+    if (throughput == 0.) // Avoid send nothing as a good option
+    {
+        reward = ~(1LL<<52);
+    }
     m_states.UpdateReward(reward);
     // std::cout << "reward: " << reward << " "
     //           << "send_rate: " << mi_metric_send_rate(mi) << " "
@@ -207,21 +218,39 @@ DataRate PccCustomRateController::GetNextSendingRate(DataRate current_rate, Time
 
     // std::cout << "Notify()" << std::endl;
     Notify(); // Notify Agent
-    auto new_sending_rate = current_rate * (1 + m_alpha_sending_rate);
-    // std::cout << "alpha: " << m_alpha_sending_rate << std::endl; 
-    if (new_sending_rate <= 0.0)
+    DataRate new_sending_rate;
+    if (m_alpha_sending_rate >= 0.0)
     {
-        new_sending_rate = DataRate("512Kbps");
+        new_sending_rate = current_rate * (1.0 + m_alpha_sending_rate);
+    }
+    else
+    {
+        new_sending_rate = current_rate * (1.0 / (1.0  - m_alpha_sending_rate));
+    }
+
+    // new_sending_rate = current_rate * (1.0 + m_alpha_sending_rate);
+
+    if (new_sending_rate < MIN_SENDING_RATE)
+    {
+        new_sending_rate = MIN_SENDING_RATE;
+    }
+    else if (new_sending_rate > MAX_SENDING_RATE)
+    {
+        new_sending_rate = MAX_SENDING_RATE;
     }
     return new_sending_rate;
+    // return DataRate("11.5Mbps");
+    // return DataRate("512Kbps");
 }
 
 // OpenGym interface
 Ptr<OpenGymSpace> PccCustomRateController::GetActionSpace()
 {
     uint32_t parameterNum = 1;
-    float low = -11e-12;
-    float high = 1;
+    float low = -1e12;
+    float high = 1e12;
+    // float low =  -1.;
+    // float high =  1.;
     std::vector<uint32_t> shape = {parameterNum,};
     std::string dtype = TypeNameGet<float> ();
 
@@ -252,8 +281,9 @@ std::string PccCustomRateController::GetExtraInfo()
 bool PccCustomRateController::ExecuteActions(Ptr<OpenGymDataContainer> action)
 {
     Ptr<OpenGymBoxContainer<float> > box = DynamicCast<OpenGymBoxContainer<float> >(action);
-    m_alpha_sending_rate = box->GetValue(0);
-    return false;
+    m_alpha_sending_rate = box->GetValue(0) * 0.05; // 0.05 is Delta Scale
+    // m_alpha_sending_rate = box->GetValue(0);
+    return true;
 }
 
 Ptr<OpenGymSpace> PccCustomRateController::GetObservationSpace()

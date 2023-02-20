@@ -110,7 +110,7 @@ main(int argc, char* argv[])
     LogComponentEnableAll (LOG_PREFIX_NODE);
     // LogComponentEnable("BulkSendApplication", LOG_LEVEL_INFO);
     // LogComponentEnable("TcpPccAurora", LOG_LEVEL_INFO);
-    // LogComponentEnable("TcpSocketBase", LOG_LEVEL_INFO);
+    // LogComponentEnable("TcpSocketBaseCustom", LOG_LEVEL_INFO);
 
     // Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::TcpNewReno"));
     // ConfigStore config;
@@ -134,7 +134,7 @@ main(int argc, char* argv[])
     // accessLink.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", StringValue("1p"));
 
     PointToPointHelper bottleneckLink;
-    bottleneckLink.SetDeviceAttribute("DataRate", StringValue("1024Kbps"));
+    bottleneckLink.SetDeviceAttribute("DataRate", StringValue("12Mbps"));
     bottleneckLink.SetChannelAttribute("Delay", StringValue("30ms"));
     bottleneckLink.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", StringValue("128p"));
 
@@ -176,11 +176,15 @@ main(int argc, char* argv[])
 
     BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(dumbell.GetRightIpv4Address(0), port));
     Config::Set("/NodeList/4/$ns3::TcpL4ProtocolCustom/SocketType", StringValue("ns3::TcpPccAurora"));
+    Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(2500000));
+    Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(5000000));
+    Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(2));
+    Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));
     // Set the amount of data to send in bytes.  Zero is unlimited.
     source.SetAttribute("MaxBytes", UintegerValue(maxBytes));
     ApplicationContainer sourceApps = source.Install(dumbell.GetLeft(0));
     sourceApps.Start(Seconds(0.0));
-    sourceApps.Stop(Seconds(60.0));
+    sourceApps.Stop(Seconds(55.0));
 
     //
     // Create a PacketSinkApplication and install it on node right
@@ -188,7 +192,7 @@ main(int argc, char* argv[])
     PacketSinkHelper sink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
     ApplicationContainer sinkApps = sink.Install(dumbell.GetRight(0));
     sinkApps.Start(Seconds(0.0));
-    sinkApps.Stop(Seconds(60.0));
+    sinkApps.Stop(Seconds(55.0));
 
     //
     // Set up tracing if enabled
@@ -220,6 +224,7 @@ main(int argc, char* argv[])
     FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats ();
     for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
     {
+        // std::cout << "here here\n";
         Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
         if (t.sourceAddress != dumbell.GetLeftIpv4Address(0))
             {

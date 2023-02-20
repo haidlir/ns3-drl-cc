@@ -20,6 +20,7 @@ import datetime
 import inspect
 import os
 import sys
+import time
 
 import gym
 import tensorflow as tf
@@ -51,7 +52,7 @@ if __name__ == "__main__":
                         type=float,
                         default="0.99",
                         help='Dicount Rate or Gammam Default: 0.99')
-    parser.add_argument('--model-dir',
+    parser.add_argument('--tf-model-name',
                         type=str,
                         default="",
                         help='Model in Tensorflow format')
@@ -69,7 +70,7 @@ if __name__ == "__main__":
     iterationNum = int(args.iterations)
     arch_str = str(args.arch)
     gamma = float(args.gamma)
-    export_dir = str(args.model_dir)
+    model_name = str(args.tf_model_name)
     sb_model_name = str(args.sb_model_name)
     conductTest = bool(args.test)
     if arch_str == "":
@@ -115,17 +116,18 @@ if __name__ == "__main__":
     # Load existing model if exist
     sb_model_name = f"./sb_saved_models/{sb_model_name}"
     if os.path.exists(f"{sb_model_name}.pkl"):
-        print(">> Load SB Model... {sb_model_name}")
-        model.load(sb_model_name, env)
+        print(f">> Load SB Model... {sb_model_name}")
+        PPO1.load(sb_model_name, env)
 
     # Train the model
     for i in range(0, iterationNum):
         model.learn(total_timesteps=(8192))
-        print(">> Save SB Model... {sb_model_name}")
+        print(f">> Save SB Model... {sb_model_name}")
         model.save(sb_model_name)
 
     # Test the trained model
     if conductTest:
+        start = time.time()
         obs = env.reset()
         acc_reward = 0
         done = False
@@ -140,13 +142,16 @@ if __name__ == "__main__":
             if done:
                 break
         print("Total reward: ", acc_reward)
+        end = time.time()
+        print(f"Testing real duration: {end - start}")
 
     ##
     #   Save the model to the location specified below.
     ##
-    if export_dir:
+    if model_name:
         model_id = f"{datetime.datetime.now().strftime('%Y-%m-%d-%H:%M')}"
-        export_dir = f"./pcc_aurora_saved_models/{model_id}/"
+        export_dir = f"./tf_saved_models/{model_name}-{model_id}/"
+        print(f">> Save TF Model... {export_dir}")
         with model.graph.as_default():
             pol = model.policy_pi #act_model
 

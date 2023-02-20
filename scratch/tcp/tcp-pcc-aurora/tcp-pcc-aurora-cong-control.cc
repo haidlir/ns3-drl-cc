@@ -112,6 +112,7 @@ TcpPccAurora::CongestionStateSet(Ptr<TcpSocketState> tcb, const TcpSocketState::
     if (newState == TcpSocketState::CA_OPEN)
     {
         NS_LOG_DEBUG("CongestionStateSet triggered to CA_OPEN :: " << newState);
+        m_wait_mode = false;
         // tcb->m_ssThresh = tcb->m_initialSsThresh;
         UpdatePacingRate(tcb);
         m_rtt_estimator.AddNewSample(tcb->m_lastRtt);
@@ -119,6 +120,7 @@ TcpPccAurora::CongestionStateSet(Ptr<TcpSocketState> tcb, const TcpSocketState::
     else if (newState == TcpSocketState::CA_LOSS)
     {
         NS_LOG_DEBUG("CongestionStateSet triggered to CA_LOSS :: " << newState);
+        m_wait_mode = true;
     }
     else if (newState == TcpSocketState::CA_RECOVERY)
     {
@@ -152,7 +154,7 @@ TcpPccAurora::UpdatePacingRate(Ptr<TcpSocketState> tcb)
     NS_LOG_INFO("Sending Rate " << m_sending_rate);
     tcb->m_pacingRate = m_sending_rate * 1.1;
     tcb->m_maxPacingRate = m_sending_rate * 1.1;
-    tcb->m_pacingSsRatio = 1;
+    tcb->m_pacingSsRatio = 1.1;
     uint32_t est_cWnd = m_sending_rate.GetBitRate()  * rtt.GetSeconds() / 8 * 1.1;
     tcb->m_cWnd = est_cWnd;
     tcb->m_ssThresh = est_cWnd;
@@ -183,6 +185,7 @@ TcpPccAurora::CongControl(Ptr<TcpSocketState> tcb,
                               const TcpRateOps::TcpRateSample& rs)
 {
     NS_LOG_FUNCTION(this << tcb);
+    if (m_wait_mode) return;
 
     auto event_time = Simulator::Now();
     SequenceNumber32 segmentsAcked = tcb -> m_lastAckedSeq;
@@ -220,6 +223,7 @@ TcpPccAurora::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const 
 void
 TcpPccAurora::OnPacketSent(Ptr<TcpSocketState> tcb, SequenceNumber32 seq, uint32_t sz)
 {
+    if (m_wait_mode) return;
     auto sent_time = Simulator::Now();
     if (ShouldCreateNewMonitorInterval(sent_time))
     {
@@ -243,6 +247,7 @@ TcpPccAurora::OnPacketLost(SequenceNumber32 seq, uint32_t sz)
 {
     auto event_time = Simulator::Now();
     m_interval_queue.OnPacketLost(event_time, seq, sz);
+    if (m_wait_mode) return;
     CheckMonitoringInterval(event_time);
 }
 

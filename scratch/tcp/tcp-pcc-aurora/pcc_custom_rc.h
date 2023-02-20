@@ -19,7 +19,16 @@ class States
         float GetLastReward() {return m_last_reward;}
     private:
         uint32_t m_size;
-        std::deque<float> m_queue;
+        std::deque<float> m_queue {0.0, 1.0, 1.0,
+                                   0.0, 1.0, 1.0,
+                                   0.0, 1.0, 1.0,
+                                   0.0, 1.0, 1.0,
+                                   0.0, 1.0, 1.0,
+                                   0.0, 1.0, 1.0,
+                                   0.0, 1.0, 1.0,
+                                   0.0, 1.0, 1.0,
+                                   0.0, 1.0, 1.0,
+                                   0.0, 1.0, 1.0};
         float m_last_reward {0.0};
 };
 

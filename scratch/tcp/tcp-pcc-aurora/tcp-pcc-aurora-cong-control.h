@@ -103,6 +103,8 @@ class TcpPccAurora : public TcpCongestionOpsCustom
     RttEstimatorJK m_rtt_estimator;
     // Queue of monitor intervals with pending utilities.
     PccMonitorIntervalQueue m_interval_queue;
+    // Wait Mode, inspired by PCC kernel space
+    bool m_wait_mode;
 
     void UpdatePacingRate(Ptr<TcpSocketState> tcb);
     Time GetCurrentRttEstimate(Time sent_time);

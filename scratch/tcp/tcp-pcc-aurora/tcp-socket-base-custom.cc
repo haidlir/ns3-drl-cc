@@ -3837,10 +3837,10 @@ TcpSocketBaseCustom::ReTxTimeout()
     m_congestionControl->CwndEvent(m_tcb, TcpSocketState::CA_EVENT_LOSS);
     m_congestionControl->CongestionStateSet(m_tcb, TcpSocketState::CA_LOSS);
     m_tcb->m_congState = TcpSocketState::CA_LOSS;
-    // m_tcb->m_cWnd = m_tcb->m_segmentSize; // PCC doesn't have RTO action
-    // m_tcb->m_cWndInfl = m_tcb->m_cWnd; // PCC doesn't have RTO action
+    m_tcb->m_cWnd = m_tcb->m_segmentSize; // PCC doesn't have RTO action
+    m_tcb->m_cWndInfl = m_tcb->m_cWnd; // PCC doesn't have RTO action
 
-    // m_pacingTimer.Cancel(); // PCC doesn't have RTO action
+    m_pacingTimer.Cancel(); // PCC doesn't have RTO action
 
     NS_LOG_DEBUG("RTO. Reset cwnd to " << m_tcb->m_cWnd << ", ssthresh to " << m_tcb->m_ssThresh
                                        << ", restart from seqnum " << m_txBuffer->HeadSequence()
