@@ -107,4 +107,7 @@ __pycache__
 
 # Scratch
 scratch/tcp/tcp-pcc-aurora/tensorboard/
-.pkl
+sb_saved_models
+tf_saved_models
+*.pkl
+*.zip

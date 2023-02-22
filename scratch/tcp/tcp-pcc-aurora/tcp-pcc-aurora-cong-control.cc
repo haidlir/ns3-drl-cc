@@ -36,7 +36,8 @@ const uint32_t kDefaultTCPMSS = 1400;
 // Number of bits per byte.
 const uint32_t kBitsPerByte = 8;
 // Duration of monitor intervals as a proportion of RTT.
-const double kMonitorIntervalDuration = 2.0;
+// const double kMonitorIntervalDuration = 2.0;
+const double kMonitorIntervalDuration = 0.5;
 // Minimum number of packets in a monitor interval.
 const uint32_t kMinimumPacketsPerInterval = 5;
 }  // namespace

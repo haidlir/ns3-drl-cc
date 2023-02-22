@@ -39,6 +39,9 @@
 #include <string>
 #include <iomanip>
 #include <iostream>
+#include <cmath>
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
 
 using namespace ns3;
 
@@ -76,9 +79,35 @@ ConnectSocketTraces()
                                   MakeCallback(&SsThreshTracer));
 }
 
+// Ptr<NormalRandomVariable> data_rate_distribution = CreateObject<NormalRandomVariable>();
+Ptr<LogNormalRandomVariable> data_rate_distribution;
+
+static void
+UpdateDataRate(PointToPointNetDevice *dev)
+{
+    float sample =  data_rate_distribution->GetValue();
+    if (sample < 2.0)
+    {
+        sample = 2.0;
+    }
+    // std::cout << sample << std::endl;
+    auto sample_bw = (uint64_t)(sample * 1e6);
+    dev->SetDataRate(DataRate(sample_bw));
+}
+
 int
 main(int argc, char* argv[])
 {
+    srand(time(NULL));
+    RngSeedManager::SetSeed(rand());  // Changes seed from default of 1 to 3
+    RngSeedManager::SetRun(rand());   // Changes run number from default of 1 to 7
+    data_rate_distribution = CreateObject<LogNormalRandomVariable>();
+    double data_rate_mean = 12.0;
+    double data_rate_variance = 10;
+    double data_rate_mu = std::log(data_rate_mean) - 0.5 * std::log(data_rate_variance/data_rate_mean);
+    double data_rate_sigma = std::sqrt(std::log(1 + data_rate_variance/(data_rate_mean*data_rate_mean)));
+    data_rate_distribution->SetAttribute("Mu", DoubleValue(data_rate_mu));
+    data_rate_distribution->SetAttribute("Sigma", DoubleValue(data_rate_sigma));
     // OpenGym Env --- has to be created before any other thing
     uint32_t openGymPort = 5555;
     Ptr<OpenGymInterface> openGymInterface;
@@ -142,8 +171,8 @@ main(int argc, char* argv[])
     PointToPointDumbbellHelper dumbell (1, accessLink,
                                     1, accessLink,
                                     bottleneckLink);
-    // auto leftNodeId = dumbell.GetLeft(0)->GetId();
-    // std::cout << "  Left Node Id: " << leftNodeId << "\n";
+    auto leftRouter = dumbell.GetLeft();
+    ns3::PointToPointNetDevice *leftRouterBottlenecNetDevice = dynamic_cast<ns3::PointToPointNetDevice*>(&(*(leftRouter->GetDevice(0))));
 
     //
     // Install the internet stack on the nodes
@@ -205,6 +234,11 @@ main(int argc, char* argv[])
     }
 
     // Simulator::Schedule(MicroSeconds(1001), &ConnectSocketTraces);
+    uint32_t simulation_duration = 60;
+    for (uint32_t i = 1; i < simulation_duration; i++)
+    {
+        Simulator::Schedule(Seconds(i), &UpdateDataRate, leftRouterBottlenecNetDevice);
+    }
 
     FlowMonitorHelper flowmon;
     Ptr<FlowMonitor> monitor = flowmon.InstallAll ();    
@@ -214,7 +248,7 @@ main(int argc, char* argv[])
     // Now, do the actual simulation.
     //
     NS_LOG_INFO("Run Simulation.");
-    Simulator::Stop(Seconds(60.0));
+    Simulator::Stop(Seconds(simulation_duration));
     Simulator::Run();
 
     if (isTest)
