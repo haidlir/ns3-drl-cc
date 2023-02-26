@@ -31,13 +31,12 @@
 NS_LOG_COMPONENT_DEFINE("TcpPccAurora");
 
 namespace {
-// Default TCPMSS used in UDT only.
-const uint32_t kDefaultTCPMSS = 1400;
+// Default TCPMSS used in QUIC.
+const uint32_t kDefaultTCPMSS =1208;
 // Number of bits per byte.
 const uint32_t kBitsPerByte = 8;
 // Duration of monitor intervals as a proportion of RTT.
-// const double kMonitorIntervalDuration = 2.0;
-const double kMonitorIntervalDuration = 0.5;
+const double kMonitorIntervalDuration = 2.0;
 // Minimum number of packets in a monitor interval.
 const uint32_t kMinimumPacketsPerInterval = 5;
 }  // namespace
