@@ -1,6 +1,6 @@
-
 #include "pcc_custom_rc.h"
 #include "monitoring-interval.h"
+#include <ns3/simulator.h>
 #include <time.h>
 #include <random>
 #include <cmath>
@@ -9,6 +9,7 @@ namespace
 {
     const ns3::DataRate MIN_SENDING_RATE = ns3::DataRate("512Kbps");
     const ns3::DataRate MAX_SENDING_RATE = ns3::DataRate("90Mbps");
+    double elapsed_time = 0.;
 }
 
 namespace ns3
@@ -222,6 +223,7 @@ void PccCustomRateController::MonitorIntervalFinished(const MonitorInterval& mi)
     //           << "loss: " << loss << " "
     //           << "min latency: " << mi_metric_conn_min_latency(mi) << " "
     //           << std::endl;
+    elapsed_time = Simulator::Now().GetSeconds();
 }
 
 DataRate PccCustomRateController::GetNextSendingRate(DataRate current_rate, Time cur_time) {
@@ -281,18 +283,24 @@ Ptr<OpenGymSpace> PccCustomRateController::GetActionSpace()
 
 bool PccCustomRateController::GetGameOver()
 {
-    bool isGameOver = false;
-    static float stepCounter = 0.0;
-    stepCounter += 1;
-    if (stepCounter >= 400) {
-        isGameOver = true;
-    }
-    return isGameOver;
+    // bool isGameOver = false;
+    // static float stepCounter = 0.0;
+    // stepCounter += 1;
+    // if (stepCounter >= 400) {
+    //     isGameOver = true;
+    // }
+    // return isGameOver;
+    return false;
 }
 
 float PccCustomRateController::GetReward()
 {
-    return m_states.GetLastReward();
+    // return m_states.GetLastReward();
+    // Flow Completion Time
+    static double last_time = 0.;
+    double delta_elapsed_time = elapsed_time - last_time;
+    last_time = elapsed_time;
+    return -delta_elapsed_time;
 }
 
 std::string PccCustomRateController::GetExtraInfo()
