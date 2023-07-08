@@ -117,6 +117,7 @@ main(int argc, char* argv[])
     double duration = 10.0;
     bool tracing = false;
     uint32_t maxBytes = 0;
+    // uint32_t maxBytes = 30 * 1500000;
     uint32_t isTest = 0;
 
     //
