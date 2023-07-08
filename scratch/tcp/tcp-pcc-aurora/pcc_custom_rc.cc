@@ -283,24 +283,24 @@ Ptr<OpenGymSpace> PccCustomRateController::GetActionSpace()
 
 bool PccCustomRateController::GetGameOver()
 {
-    // bool isGameOver = false;
-    // static float stepCounter = 0.0;
-    // stepCounter += 1;
-    // if (stepCounter >= 400) {
-    //     isGameOver = true;
-    // }
-    // return isGameOver;
-    return false;
+    bool isGameOver = false;
+    static float stepCounter = 0.0;
+    stepCounter += 1;
+    if (stepCounter >= 400) {
+        isGameOver = true;
+    }
+    return isGameOver;
+    // return false;
 }
 
 float PccCustomRateController::GetReward()
 {
-    // return m_states.GetLastReward();
+    return m_states.GetLastReward();
     // Flow Completion Time
-    static double last_time = 0.;
-    double delta_elapsed_time = elapsed_time - last_time;
-    last_time = elapsed_time;
-    return -delta_elapsed_time;
+    // static double last_time = 0.;
+    // double delta_elapsed_time = elapsed_time - last_time;
+    // last_time = elapsed_time;
+    // return -delta_elapsed_time;
 }
 
 std::string PccCustomRateController::GetExtraInfo()
